@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import './App.css';
 
+const API_URL = process.env.REACT_APP_API_URL || 'https://project-gridx.onrender.com';
+
 function App() {
     // Authentication State
     const [user, setUser] = useState(null);
@@ -40,7 +42,7 @@ function App() {
     useEffect(() => {
         const fetchUser = async () => {
             try {
-                const response = await fetch('http://localhost:5000/api/user', { credentials: 'include' });
+                const response = await fetch(`${API_URL}/api/auth/user`, { credentials: 'include' });
                 if (response.ok) {
                     const data = await response.json();
                     setUser(data.user);
@@ -212,7 +214,7 @@ function App() {
         formData.append('cols', cols);
 
         try {
-            const response = await fetch('http://localhost:5000/api/split', {
+            const response = await fetch(`${API_URL}/api/split`, {
                 method: 'POST',
                 body: formData,
             });
@@ -264,7 +266,7 @@ function App() {
         formData.append('tweetText', tweetText);
 
         try {
-            const response = await fetch('http://localhost:5000/api/post-tweet', {
+            const response = await fetch(`${API_URL}/api/post-tweet`, {
                 method: 'POST',
                 body: formData,
                 credentials: 'include',
@@ -291,7 +293,7 @@ function App() {
 
     const handleLogout = async () => {
         try {
-            await fetch('http://localhost:5000/api/logout', { 
+            await fetch(`${API_URL}/api/auth/logout`, { 
                 method: 'POST',
                 credentials: 'include' 
             });
@@ -644,7 +646,7 @@ function App() {
                                 </>
                             ) : (
                                 <motion.a
-                                    href="http://localhost:5000/api/auth/twitter"
+                                    href={`${API_URL}/api/auth/login`}
                                     className="action-btn twitter-login-btn"
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
