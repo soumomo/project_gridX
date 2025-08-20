@@ -11,13 +11,9 @@
     "start:frontend": "cd frontend && npm start",
     "dev:api": "cd api && npm run dev",
     "dev": "concurrently \"npm run dev:api\" \"npm run start:frontend\"",
-    "build": "cd frontend && npm run build"
-  }
-
-
-
-
 ,
+    "build": "cd frontend && npm run build"
+    }
   "keywords": [
     "image",
     "split",
@@ -32,6 +28,5 @@
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2"
-  },
-  
+  }
 }
