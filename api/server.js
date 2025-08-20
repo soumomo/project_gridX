@@ -12,17 +12,19 @@ const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
 const FormData = require('form-data');
 const { createClient } = require("redis");
-const RedisStore = require("connect-redis");
+const connectRedis = require('connect-redis');
 
 // Initialize Redis Client
 let redisClient;
 if (process.env.REDIS_URL) {
-    redisClient = createClient({ url: process.env.REDIS_URL });
+    // legacyMode is required for connect-redis v6
+    redisClient = createClient({ url: process.env.REDIS_URL, legacyMode: true });
     redisClient.connect().catch(console.error);
     redisClient.on('error', err => console.error('Redis error:', err));
 }
 
 // Initialize session store
+const RedisStore = connectRedis(session);
 let sessionStore;
 if (redisClient) {
     sessionStore = new RedisStore({
