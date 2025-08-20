@@ -1,0 +1,37 @@
+{
+  "name": "split-and-post-app",
+  "version": "1.0.0",
+  "description": "A full-stack web application for splitting images and posting to X (Twitter)",
+  "main": "index.js",
+  "scripts": {
+    "install:api": "cd api && npm install",
+    "install:frontend": "cd frontend && npm install",
+    "install:all": "npm run install:api && npm run install:frontend",
+    "start:api": "cd api && npm start",
+    "start:frontend": "cd frontend && npm start",
+    "dev:api": "cd api && npm run dev",
+    "dev": "concurrently \"npm run dev:api\" \"npm run start:frontend\"",
+    "build": "cd frontend && npm run build"
+  }
+
+
+
+
+,
+  "keywords": [
+    "image",
+    "split",
+    "twitter",
+    "x",
+    "social-media",
+    "react",
+    "express",
+    "oauth"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  
+}
