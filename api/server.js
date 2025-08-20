@@ -12,7 +12,7 @@ const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
 const FormData = require('form-data');
 const { createClient } = require("redis");
-const RedisStore = require("connect-redis").default;
+const RedisStore = require("connect-redis");
 
 // Initialize Redis Client
 let redisClient;
