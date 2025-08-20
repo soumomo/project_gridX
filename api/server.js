@@ -11,6 +11,25 @@ const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
 const FormData = require('form-data');
+const { createClient } = require("redis");
+const RedisStore = require("connect-redis").default;
+
+// Initialize Redis Client
+let redisClient;
+if (process.env.REDIS_URL) {
+    redisClient = createClient({ url: process.env.REDIS_URL });
+    redisClient.connect().catch(console.error);
+    redisClient.on('error', err => console.error('Redis error:', err));
+}
+
+// Initialize session store
+let sessionStore;
+if (redisClient) {
+    sessionStore = new RedisStore({
+        client: redisClient,
+        prefix: "gridx:",
+    });
+}
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -43,6 +62,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
+    store: sessionStore, // Use Redis store in production
     secret: process.env.SESSION_SECRET || 'default-secret-change-in-production',
     resave: false,
     saveUninitialized: false,
