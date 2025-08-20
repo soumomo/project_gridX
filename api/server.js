@@ -58,14 +58,14 @@ const base64URLEncode = (str) => str.toString('base64').replace(/\+/g, '-').repl
 const sha256 = (buffer) => crypto.createHash('sha256').update(buffer).digest();
 
 // --- X API Constants ---
-const TWITTER_CLIENT_ID = process.env.TWITTER_CLIENT_ID;
-const TWITTER_CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET;
-const CALLBACK_URL = process.env.CALLBACK_URL || 'http://localhost:5000/api/auth/twitter/callback';
+const X_CLIENT_ID = process.env.X_CLIENT_ID;
+const X_CLIENT_SECRET = process.env.X_CLIENT_SECRET;
+const CALLBACK_URL = process.env.CALLBACK_URL || 'http://localhost:5000/api/auth/callback';
 
 // --- Authentication Routes ---
 
 // 1. Redirects user to X for authorization
-app.get('/api/auth/twitter', (req, res) => {
+app.get('/api/auth/login', (req, res) => {
     const codeVerifier = base64URLEncode(crypto.randomBytes(32));
     req.session.codeVerifier = codeVerifier;
 
@@ -74,10 +74,10 @@ app.get('/api/auth/twitter', (req, res) => {
     
     const authUrl = new URL('https://twitter.com/i/oauth2/authorize');
     authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('client_id', TWITTER_CLIENT_ID);
+    authUrl.searchParams.set('client_id', X_CLIENT_ID);
     authUrl.searchParams.set('redirect_uri', CALLBACK_URL);
     authUrl.searchParams.set('scope', scope);
-    authUrl.searchParams.set('state', 'state'); // CSRF token
+    authUrl.searchParams.set('state', 'state'); // Simple CSRF token
     authUrl.searchParams.set('code_challenge', codeChallenge);
     authUrl.searchParams.set('code_challenge_method', 'S256');
 
@@ -85,62 +85,45 @@ app.get('/api/auth/twitter', (req, res) => {
 });
 
 // 2. X redirects back here; we exchange the code for an access token
-app.get('/api/auth/twitter/callback', async (req, res) => {
-    const { code, error, error_description } = req.query;
+app.get('/api/auth/callback', async (req, res) => {
+    const { code, error } = req.query;
     const { codeVerifier } = req.session;
 
-    // Handle OAuth errors from Twitter
     if (error) {
-        console.error('OAuth error from Twitter:', error, error_description);
-        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}?auth_error=${encodeURIComponent(error_description || error)}`);
-    }
-
-    if (!code) {
-        console.error('No authorization code received');
-        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}?auth_error=no_code`);
-    }
-
-    if (!codeVerifier) {
-        console.error('No code verifier found in session');
-        return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}?auth_error=session_expired`);
+        return res.redirect(`${process.env.FRONTEND_URL}?error=${error}`);
     }
 
     try {
-        console.log('Exchanging code for token...');
         const response = await axios.post('https://api.twitter.com/2/oauth2/token', new URLSearchParams({
             grant_type: 'authorization_code',
             code: code,
             redirect_uri: CALLBACK_URL,
             code_verifier: codeVerifier,
-            client_id: TWITTER_CLIENT_ID,
         }), {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
-                'Authorization': `Basic ${Buffer.from(`${TWITTER_CLIENT_ID}:${TWITTER_CLIENT_SECRET}`).toString('base64')}`,
+                'Authorization': `Basic ${Buffer.from(`${X_CLIENT_ID}:${X_CLIENT_SECRET}`).toString('base64')}`,
             },
         });
 
-        console.log('Token received, fetching user info...');
         req.session.accessToken = response.data.access_token;
         req.session.refreshToken = response.data.refresh_token;
 
+        // Fetch user info
         const userResponse = await axios.get('https://api.twitter.com/2/users/me', {
              headers: { 'Authorization': `Bearer ${req.session.accessToken}` }
         });
-
         req.session.user = userResponse.data.data;
-        console.log('User authenticated:', req.session.user.username);
         
-        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}?auth_success=true`);
-    } catch (error) {
-        console.error('Error during X callback:', error.response?.data || error.message);
-        const errorMessage = error.response?.data?.error_description || error.response?.data?.error || 'Authentication failed';
-        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}?auth_error=${encodeURIComponent(errorMessage)}`);
+        res.redirect(process.env.FRONTEND_URL || 'http://localhost:3000');
+    } catch (err) {
+        console.error("Error during X callback:", err.response ? err.response.data : err.message);
+        res.status(500).send("Authentication failed");
     }
 });
 
 // 3. Endpoint for the frontend to check if a user is logged in
-app.get('/api/user', (req, res) => {
+app.get('/api/auth/user', (req, res) => {
     if (req.session.user) {
         res.json({ user: req.session.user });
     } else {
@@ -149,9 +132,14 @@ app.get('/api/user', (req, res) => {
 });
 
 // 4. Logout endpoint
-app.post('/api/logout', (req, res) => {
-    req.session.destroy();
-    res.json({ message: 'Logged out successfully' });
+app.post('/api/auth/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            return res.status(500).json({ message: 'Could not log out.' });
+        }
+        res.clearCookie('connect.sid');
+        res.json({ message: 'Logged out successfully' });
+    });
 });
 
 
@@ -353,7 +341,6 @@ app.post('/api/post-tweet', upload.single('image'), async (req, res) => {
     }
 });
 
-
 // Health check endpoint
 app.get('/api/health', (req, res) => {
     res.json({ 
@@ -384,8 +371,8 @@ if (process.env.NODE_ENV !== 'production') {
     app.listen(port, () => {
         console.log(`🚀 Server is running on http://localhost:${port}`);
         console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-        if (!process.env.TWITTER_CLIENT_ID || process.env.TWITTER_CLIENT_ID === 'YOUR_APP_CLIENT_ID') {
-            console.warn('⚠️  Warning: Twitter API credentials not configured. X integration will not work.');
+        if (!process.env.X_CLIENT_ID || !process.env.X_CLIENT_SECRET) {
+            console.warn('⚠️  Warning: X API credentials not configured. X integration will not work.');
         }
     });
 }
