@@ -82,7 +82,7 @@ const sha256 = (buffer) => crypto.createHash('sha256').update(buffer).digest();
 // --- X API Constants ---
 const X_CLIENT_ID = process.env.X_CLIENT_ID;
 const X_CLIENT_SECRET = process.env.X_CLIENT_SECRET;
-const CALLBACK_URL = process.env.CALLBACK_URL || 'http://localhost:5000/api/auth/callback';
+const CALLBACK_URL = process.env.CALLBACK_URL;
 
 // --- Authentication Routes ---
 
