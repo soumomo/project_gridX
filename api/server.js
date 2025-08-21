@@ -388,16 +388,13 @@ app.use((error, req, res, next) => {
     });
 });
 
-// For local development
-if (process.env.NODE_ENV !== 'production') {
-    app.listen(port, () => {
-        console.log(`🚀 Server is running on http://localhost:${port}`);
-        console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-        if (!process.env.X_CLIENT_ID || !process.env.X_CLIENT_SECRET) {
-            console.warn('⚠️  Warning: X API credentials not configured. X integration will not work.');
-        }
-    });
-}
-
-// Export for Vercel serverless deployment
-module.exports = app;
+app.listen(port, () => {
+    console.log(`🚀 Server is running on port ${port}`);
+    console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+    if (!process.env.X_CLIENT_ID || !process.env.X_CLIENT_SECRET) {
+        console.warn('⚠️  Warning: X API credentials not configured. X integration will not work.');
+    }
+    if (process.env.NODE_ENV === 'production' && !process.env.REDIS_URL) {
+        console.error('❌ FATAL: REDIS_URL not set in production. Session storage will fail.');
+    }
+});
